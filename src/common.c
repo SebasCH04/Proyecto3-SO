@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+//repite la lectura hasta completar el tamaño solicitado
 int read_full(int fd, void *buffer, size_t length) {
     unsigned char *cursor = buffer;
     size_t completed = 0U;
@@ -32,6 +33,7 @@ int read_full(int fd, void *buffer, size_t length) {
     return 1;
 }
 
+//repite la escritura para manejar operaciones parciales
 int write_full(int fd, const void *buffer, size_t length) {
     const unsigned char *cursor = buffer;
     size_t completed = 0U;
@@ -49,6 +51,7 @@ int write_full(int fd, const void *buffer, size_t length) {
     return 0;
 }
 
+//transfiere una cantidad exacta usando bloques pequeños
 int copy_exact(int input_fd, int output_fd, uint64_t length) {
     unsigned char buffer[AWS_S3_IO_CHUNK];
     uint64_t remaining = length;
@@ -67,6 +70,7 @@ int copy_exact(int input_fd, int output_fd, uint64_t length) {
     return 0;
 }
 
+//lee desde una posicion sin modificar el cursor del archivo
 int copy_exact_at(int input_fd, uint64_t offset, int output_fd, uint64_t length) {
     unsigned char buffer[AWS_S3_IO_CHUNK];
     uint64_t remaining = length;
@@ -97,6 +101,7 @@ int copy_exact_at(int input_fd, uint64_t offset, int output_fd, uint64_t length)
     return 0;
 }
 
+//convierte enteros de 64 bits al orden usado por la red
 uint64_t host_to_be64(uint64_t value) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     return ((uint64_t) htonl((uint32_t) (value >> 32U))) |
@@ -136,6 +141,7 @@ int join_path(char *output, size_t capacity, const char *left, const char *right
     return written >= 0 && (size_t) written < capacity ? 0 : -1;
 }
 
+//crea los directorios anteriores al nombre final
 int ensure_parent_directories(const char *path) {
     char *copy = strdup(path);
     char *cursor;
@@ -158,6 +164,7 @@ int ensure_parent_directories(const char *path) {
     return 0;
 }
 
+//prueba las direcciones resueltas hasta establecer la conexion
 int connect_tcp(const char *host, const char *port, char *error, size_t error_size) {
     struct addrinfo hints;
     struct addrinfo *addresses = NULL;

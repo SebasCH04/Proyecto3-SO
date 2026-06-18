@@ -23,6 +23,7 @@ void manifest_free(manifest_t *manifest) {
     memset(manifest, 0, sizeof(*manifest));
 }
 
+//crece la lista conforme aparecen nuevos archivos
 int manifest_add(manifest_t *manifest, const char *name, const char *path,
                  uint64_t size, uint64_t mtime, int is_prefix) {
     manifest_entry_t *entry;
@@ -64,6 +65,7 @@ const manifest_entry_t *manifest_find(const manifest_t *manifest, const char *na
     return NULL;
 }
 
+//recorre subdirectorios sin seguir enlaces simbolicos
 static int collect_directory(const char *root, const char *relative,
                              manifest_t *manifest, char *error, size_t error_size) {
     char directory_path[4096];
@@ -129,6 +131,7 @@ static int collect_directory(const char *root, const char *relative,
     return 0;
 }
 
+//acepta un archivo individual o inicia un recorrido recursivo
 int manifest_collect_local(const char *root, manifest_t *manifest,
                            char *error, size_t error_size) {
     struct stat status;

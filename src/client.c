@@ -15,16 +15,19 @@
 #include <time.h>
 #include <unistd.h>
 
+//mantiene la conexion activa durante todo el comando
 typedef struct {
     int fd;
 } client_t;
 
+//agrupa las opciones que modifican el comportamiento del comando
 typedef struct {
     int recursive;
     int delete_extra;
     int force;
 } command_options_t;
 
+//envia un encabezado seguido por su mensaje de control
 static int send_request(client_t *client, uint16_t opcode, uint32_t flags,
                         const protocol_buffer_t *payload) {
     protocol_header_t header;
@@ -42,6 +45,7 @@ static int send_request(client_t *client, uint16_t opcode, uint32_t flags,
     return 0;
 }
 
+//centraliza la validacion de respuestas y mensajes de error
 static int receive_response_header(client_t *client, uint16_t opcode,
                                    protocol_header_t *response) {
     unsigned char *payload = NULL;
@@ -113,6 +117,7 @@ static int request_object_pair(client_t *client, uint16_t opcode, uint32_t flags
     return result == 0 ? receive_empty_response(client, opcode) : -1;
 }
 
+//convierte el manifiesto remoto a la representacion usada por el cliente
 static int remote_list(client_t *client, const char *bucket, const char *prefix,
                        int recursive, manifest_t *manifest) {
     protocol_buffer_t payload;
@@ -175,6 +180,7 @@ cleanup:
     return result;
 }
 
+//envia metadatos y contenido sin cargar el archivo completo
 static int remote_put(client_t *client, const char *local_path,
                       const char *bucket, const char *key) {
     struct stat status;
@@ -229,6 +235,7 @@ static int set_file_mtime(const char *path, uint64_t mtime) {
     return utimensat(AT_FDCWD, path, times, 0);
 }
 
+//recibe el contenido, crea la ruta local y conserva su fecha
 static int remote_get(client_t *client, const char *bucket, const char *key,
                       const char *local_path) {
     protocol_buffer_t payload;
@@ -339,6 +346,7 @@ static int ensure_directory(const char *path) {
     return 0;
 }
 
+//decide si el destino local debe tratarse como archivo o directorio
 static int destination_local_path(char *output, size_t capacity,
                                   const char *destination, const char *name) {
     struct stat status;
@@ -375,6 +383,7 @@ static const char *relative_remote_name(const char *key, const char *prefix) {
     return key;
 }
 
+//elimina unicamente directorios que quedaron vacios despues de mover
 static int remove_empty_directories(const char *path) {
     DIR *directory = opendir(path);
     struct dirent *item;
@@ -411,6 +420,7 @@ static int remove_empty_directories(const char *path) {
     return result;
 }
 
+//recorre el origen local cuando se solicita una operacion recursiva
 static int copy_local_to_s3(client_t *client, const char *source,
                             const s3_uri_t *destination, int recursive, int move) {
     struct stat status;
@@ -461,6 +471,7 @@ static int copy_local_to_s3(client_t *client, const char *source,
     return 0;
 }
 
+//descarga un objeto individual o todos los objetos bajo un prefijo
 static int copy_s3_to_local(client_t *client, const s3_uri_t *source,
                             const char *destination, int recursive, int move) {
     if (!recursive) {
@@ -506,6 +517,7 @@ static int copy_s3_to_local(client_t *client, const s3_uri_t *source,
     return 0;
 }
 
+//coordina copias y movimientos que no pasan por el disco local
 static int copy_s3_to_s3(client_t *client, const s3_uri_t *source,
                          const s3_uri_t *destination, int recursive, int move) {
     char key[AWS_S3_KEY_MAX + 1U];
@@ -580,6 +592,7 @@ static int command_copy(client_t *client, const char *source_text,
     return copy_s3_to_s3(client, &source, &destination, recursive, move);
 }
 
+//compara tamaño y fecha antes de subir cada archivo
 static int sync_local_to_s3(client_t *client, const char *source,
                             const s3_uri_t *destination, int delete_extra) {
     manifest_t local;
@@ -634,6 +647,7 @@ failure:
     return -1;
 }
 
+//descarga solo diferencias y elimina sobrantes al final
 static int sync_s3_to_local(client_t *client, const s3_uri_t *source,
                             const char *destination, int delete_extra) {
     manifest_t remote;
@@ -776,6 +790,7 @@ static int parse_uri_command(const char *text, s3_uri_t *uri, int require_empty_
     return 0;
 }
 
+//despacha el comando despues de validar argumentos y opciones
 static int execute_command(client_t *client, const char *command,
                            int argument_count, char **arguments,
                            const command_options_t *options) {

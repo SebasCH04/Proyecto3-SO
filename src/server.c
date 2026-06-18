@@ -15,11 +15,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+//responde una operacion exitosa que no devuelve contenido
 static int send_simple_response(int fd, uint16_t opcode) {
     protocol_header_t response = {opcode, 0U, STATUS_OK, 0U};
     return protocol_send_header(fd, &response);
 }
 
+//serializa listados de buckets, objetos y prefijos
 static int send_manifest_response(int fd, uint16_t opcode, const manifest_t *manifest) {
     protocol_buffer_t payload;
     protocol_header_t response;
@@ -87,6 +89,7 @@ static int handle_list_buckets(int fd, storage_t *storage,
     return result;
 }
 
+//valida los datos antes de consultar el motor de almacenamiento
 static int handle_list_objects(int fd, storage_t *storage,
                                const protocol_header_t *request,
                                const unsigned char *payload, size_t payload_length) {
@@ -150,6 +153,7 @@ static int handle_bucket_command(int fd, storage_t *storage,
                : protocol_send_error(fd, request->opcode, (uint32_t) status, error);
 }
 
+//envia metadatos y bytes directamente desde el archivo bucket
 static int handle_get(int fd, storage_t *storage, const protocol_header_t *request,
                       const unsigned char *payload, size_t payload_length) {
     protocol_reader_t parser;
@@ -302,6 +306,7 @@ static int receive_u64(int fd, uint64_t *value) {
     return 0;
 }
 
+//lee campos pequeños antes de entregar el flujo al almacenamiento
 static int receive_stream_string(int fd, char **value, uint64_t *consumed) {
     uint32_t length;
     char *text;
@@ -319,6 +324,7 @@ static int receive_stream_string(int fd, char **value, uint64_t *consumed) {
     return 0;
 }
 
+//mantiene los bytes del archivo fuera de los buffers de control
 static int handle_put(int fd, storage_t *storage, const protocol_header_t *request) {
     char *bucket = NULL;
     char *key = NULL;
@@ -356,6 +362,7 @@ static int handle_put(int fd, storage_t *storage, const protocol_header_t *reque
     return send_simple_response(fd, request->opcode);
 }
 
+//selecciona el manejador segun el codigo de operacion
 static int dispatch_request(int fd, storage_t *storage,
                             const protocol_header_t *request) {
     unsigned char *payload = NULL;
@@ -406,6 +413,7 @@ static int dispatch_request(int fd, storage_t *storage,
     return result;
 }
 
+//atiende solicitudes hasta que el cliente cierre la conexion
 static void serve_client(int client_fd, storage_t *storage) {
     for (;;) {
         protocol_header_t request;
@@ -419,6 +427,7 @@ static void serve_client(int client_fd, storage_t *storage) {
     }
 }
 
+//crea el socket de escucha para ipv4 o ipv6
 static int create_listener(const char *host, const char *port,
                            char *error, size_t error_size) {
     struct addrinfo hints;
@@ -497,8 +506,9 @@ int main(int argc, char **argv) {
         storage_destroy(storage);
         return EXIT_FAILURE;
     }
-    fprintf(stderr, "aws-s3_server escuchando en %s:%s (backend de prueba)\n",
-            host, port);
+    fprintf(stderr, "aws-s3_server escuchando en %s:%s; datos en %s\n",
+            host, port, data_root);
+    //el servidor es secuencial, cada cliente se atiende por completo
     for (;;) {
         int client_fd = accept(listener, NULL, NULL);
         if (client_fd < 0) {

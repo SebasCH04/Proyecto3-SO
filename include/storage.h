@@ -8,6 +8,7 @@
 
 typedef struct storage storage_t;
 
+//describe una region de un bucket lista para ser enviada
 typedef struct {
     int fd;
     uint64_t offset;
@@ -15,10 +16,7 @@ typedef struct {
     uint64_t mtime;
 } storage_reader_t;
 
-/*
- * Contrato que debe implementar el motor persistente. Todas las funciones
- * devuelven un valor de enum protocol_status.
- */
+//todas las funciones devuelven un valor de protocol_status
 int storage_create(storage_t **storage, const char *root,
                    char *error, size_t error_size);
 void storage_destroy(storage_t *storage);

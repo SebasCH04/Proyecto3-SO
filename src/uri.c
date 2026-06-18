@@ -8,6 +8,7 @@ int is_s3_uri(const char *text) {
     return text != NULL && strncmp(text, "s3://", 5U) == 0;
 }
 
+//evita nombres vacios y caracteres que no sirven para archivos
 int validate_bucket_name(const char *bucket, char *error, size_t error_size) {
     size_t index;
     size_t length = strlen(bucket);
@@ -32,6 +33,7 @@ int validate_bucket_name(const char *bucket, char *error, size_t error_size) {
     return 0;
 }
 
+//rechaza rutas absolutas y componentes que permitan salir del bucket
 int validate_object_key(const char *key, char *error, size_t error_size) {
     const char *component = key;
     const char *cursor;
@@ -63,6 +65,7 @@ int validate_object_key(const char *key, char *error, size_t error_size) {
     return 0;
 }
 
+//separa el bucket de la clave y conserva la barra final
 int parse_s3_uri(const char *text, s3_uri_t *uri, char *error, size_t error_size) {
     const char *bucket;
     const char *slash;
@@ -103,6 +106,7 @@ int parse_s3_uri(const char *text, s3_uri_t *uri, char *error, size_t error_size
     return validate_object_key(uri->key, error, error_size);
 }
 
+//une un prefijo y un nombre sin duplicar barras
 int join_object_key(char *output, size_t capacity, const char *prefix, const char *name) {
     size_t prefix_length = strlen(prefix);
     int written;
@@ -118,4 +122,3 @@ int join_object_key(char *output, size_t capacity, const char *prefix, const cha
     }
     return written >= 0 && (size_t) written < capacity ? 0 : -1;
 }
-

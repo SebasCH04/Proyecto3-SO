@@ -6,6 +6,7 @@
 #define AWS_S3_BUCKET_MAX 63U
 #define AWS_S3_KEY_MAX 511U
 
+//separa una direccion s3 en bucket, clave y tipo de destino
 typedef struct {
     char bucket[AWS_S3_BUCKET_MAX + 1U];
     char key[AWS_S3_KEY_MAX + 1U];
@@ -19,4 +20,3 @@ int validate_object_key(const char *key, char *error, size_t error_size);
 int join_object_key(char *output, size_t capacity, const char *prefix, const char *name);
 
 #endif
-

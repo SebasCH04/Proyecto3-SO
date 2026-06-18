@@ -38,6 +38,7 @@ enum protocol_status {
     STATUS_INTERNAL_ERROR = 7
 };
 
+//representa los campos logicos del encabezado de red
 typedef struct {
     uint16_t opcode;
     uint32_t flags;
@@ -45,12 +46,14 @@ typedef struct {
     uint64_t payload_length;
 } protocol_header_t;
 
+//mantiene un mensaje serializado que puede crecer dinamicamente
 typedef struct {
     unsigned char *data;
     size_t length;
     size_t capacity;
 } protocol_buffer_t;
 
+//permite leer un mensaje sin avanzar fuera de sus limites
 typedef struct {
     const unsigned char *data;
     size_t length;
@@ -75,4 +78,3 @@ int protocol_reader_get_string(protocol_reader_t *reader, char **value);
 int protocol_reader_finished(const protocol_reader_t *reader);
 
 #endif
-

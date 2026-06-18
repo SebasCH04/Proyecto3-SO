@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+//describe un archivo, objeto o prefijo encontrado
 typedef struct {
     char *name;
     char *path;
@@ -12,6 +13,7 @@ typedef struct {
     int is_prefix;
 } manifest_entry_t;
 
+//agrupa entradas para listados y operaciones recursivas
 typedef struct {
     manifest_entry_t *entries;
     size_t count;
@@ -27,4 +29,3 @@ int manifest_collect_local(const char *root, manifest_t *manifest,
                            char *error, size_t error_size);
 
 #endif
-

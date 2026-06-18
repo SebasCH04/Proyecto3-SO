@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+//aumenta el buffer solo cuando el espacio actual no alcanza
 static int buffer_reserve(protocol_buffer_t *buffer, size_t additional) {
     size_t required;
     size_t capacity;
@@ -35,6 +36,7 @@ static int buffer_reserve(protocol_buffer_t *buffer, size_t additional) {
     return 0;
 }
 
+//construye manualmente el encabezado fijo de 24 bytes
 int protocol_send_header(int fd, const protocol_header_t *header) {
     unsigned char wire[PROTOCOL_HEADER_SIZE];
     uint32_t value32;
@@ -56,6 +58,7 @@ int protocol_send_header(int fd, const protocol_header_t *header) {
     return write_full(fd, wire, sizeof(wire));
 }
 
+//valida la firma y version antes de aceptar el encabezado
 int protocol_receive_header(int fd, protocol_header_t *header) {
     unsigned char wire[PROTOCOL_HEADER_SIZE];
     uint32_t value32;
@@ -85,6 +88,7 @@ int protocol_receive_header(int fd, protocol_header_t *header) {
     return 1;
 }
 
+//envia los errores con el mismo formato que una respuesta normal
 int protocol_send_error(int fd, uint16_t opcode, uint32_t status, const char *message) {
     protocol_buffer_t payload;
     protocol_header_t header;
@@ -107,6 +111,7 @@ int protocol_send_error(int fd, uint16_t opcode, uint32_t status, const char *me
     return result;
 }
 
+//limita los mensajes de control para evitar reservas excesivas
 int protocol_receive_control_payload(int fd, uint64_t length, unsigned char **payload) {
     unsigned char *data;
 
@@ -158,6 +163,7 @@ int protocol_buffer_put_u64(protocol_buffer_t *buffer, uint64_t value) {
     return 0;
 }
 
+//serializa una cadena como longitud seguida por sus bytes
 int protocol_buffer_put_string(protocol_buffer_t *buffer, const char *value) {
     size_t length = strlen(value);
     if (length > UINT32_MAX ||
@@ -198,6 +204,7 @@ int protocol_reader_get_u64(protocol_reader_t *reader, uint64_t *value) {
     return 0;
 }
 
+//reserva una copia terminada en nulo para el texto recibido
 int protocol_reader_get_string(protocol_reader_t *reader, char **value) {
     uint32_t length;
     char *text;
@@ -221,4 +228,3 @@ int protocol_reader_get_string(protocol_reader_t *reader, char **value) {
 int protocol_reader_finished(const protocol_reader_t *reader) {
     return reader->position == reader->length;
 }
-
