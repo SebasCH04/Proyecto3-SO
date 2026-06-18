@@ -118,7 +118,7 @@ posición donde termina el área de datos.
 
 ### Cliente
 
-El cliente se encuentra en `src/client.c`. Su primera tarea es interpretar el
+El cliente se encuentra en `C/client.c`. Su primera tarea es interpretar el
 comando y las opciones escritas por el usuario. Después valida si cada
 ubicación es local o si utiliza el formato `s3://`.
 
@@ -130,7 +130,7 @@ después de eso se elimina el origen.
 
 ### Servidor
 
-El servidor está implementado en `src/server.c`. Este abre un socket, espera
+El servidor está implementado en `C/server.c`. Este abre un socket, espera
 conexiones y procesa un cliente a la vez. Por cada solicitud recibe el
 encabezado, lee el contenido correspondiente y llama a la función adecuada del
 motor de almacenamiento.
@@ -141,7 +141,7 @@ error.
 
 ### Protocolo de comunicación
 
-Los archivos `src/protocol.c` e `include/protocol.h` contienen la lógica para
+Los archivos `C/protocol.c` y `H/protocol.h` contienen la lógica para
 serializar y recibir mensajes. El protocolo define operaciones para crear y
 eliminar buckets, listar objetos, subir, descargar, copiar, mover y eliminar
 objetos.
@@ -152,7 +152,7 @@ completo del archivo.
 
 ### Motor de almacenamiento
 
-El archivo `src/storage_file.c` contiene el almacenamiento persistente. Cada
+El archivo `C/storage_file.c` contiene el almacenamiento persistente. Cada
 bucket corresponde a un archivo con extensión `.s3b`. El primer MiB está
 reservado para el encabezado, la tabla de objetos y la lista de espacios
 libres. Los datos comienzan después de este bloque.
@@ -269,3 +269,112 @@ y la lista de espacios libres. Los datos se almacenan después de ese bloque.
 Se utiliza primer ajuste para reutilizar espacio. La interfaz se describe en
 [`docs/storage-interface.md`](docs/storage-interface.md) y el protocolo en
 [`docs/protocol.md`](docs/protocol.md).
+
+## Pruebas
+
+Para dejar evidencia reproducible se creó la carpeta
+[`pruebas/`](pruebas/README.md), que contiene tres scripts:
+
+- `sh pruebas/funcionales.sh`
+- `sh pruebas/validacion.sh`
+- `sh pruebas/rendimiento.sh`
+
+Cada script crea su propio directorio temporal, inicia una instancia local del
+servidor, ejecuta las operaciones necesarias y elimina el entorno al finalizar.
+
+### Pruebas funcionales
+
+Las pruebas funcionales verificaron el flujo principal del sistema:
+
+- Creación de bucket con `mb`.
+- Subida de un archivo individual con `cp`.
+- Subida recursiva de un directorio con `cp --recursive`.
+- Listado de buckets y de objetos con `ls`.
+- Descarga de un archivo y comparación con `cmp`.
+- Eliminación de un prefijo con `rm --recursive`.
+- Eliminación del último objeto y borrado del bucket con `rb`.
+
+Resultado observado: todas las subpruebas anteriores finalizaron
+correctamente.
+
+### Pruebas de validación
+
+Las pruebas de validación se enfocaron en restricciones, persistencia e
+integridad:
+
+- Rechazo de buckets duplicados.
+- Rechazo de enlaces simbólicos como origen de `cp`.
+- Rechazo de `rb` sobre un bucket no vacío sin `--force`.
+- Descarga y comparación de un archivo de 80 KiB.
+- Reinicio del servidor y nueva descarga del objeto para comprobar
+  persistencia.
+- Reemplazo de un objeto por otro del mismo tamaño y luego por otro de tamaño
+  distinto para observar el tamaño del archivo bucket.
+
+Resultados observados:
+
+| Medición | Resultado |
+|---|---:|
+| Tamaño del bucket antes del reemplazo | 1130502 bytes |
+| Tamaño del bucket tras reemplazo del mismo tamaño | 1130502 bytes |
+| Tamaño del bucket tras reemplazo de distinto tamaño | 1130522 bytes |
+
+Interpretación:
+
+- El reemplazo con el mismo tamaño no aumentó el archivo del bucket.
+- El reemplazo con tamaño distinto sí modificó el tamaño final del bucket.
+- Los objetos siguieron disponibles después de reiniciar el servidor.
+
+### Pruebas de rendimiento
+
+Las pruebas de rendimiento se ejecutaron en el mismo equipo, usando conexión
+local `127.0.0.1`, para comparar dos escenarios:
+
+- Un archivo grande de 16 MiB.
+- Un conjunto de 200 archivos pequeños de 4 KiB cada uno.
+
+Resultados observados:
+
+| Medición | Resultado |
+|---|---:|
+| Subida de archivo grande | 10 ms |
+| Descarga de archivo grande | 9 ms |
+| Subida de 200 archivos pequeños | 8410 ms |
+| Descarga de 200 archivos pequeños | 16648 ms |
+| Tamaño final del bucket de rendimiento | 18644992 bytes |
+
+Interpretación:
+
+- La transferencia de un archivo grande resultó mucho más rápida que la de
+  muchos archivos pequeños.
+- El costo principal en el caso de archivos pequeños proviene de repetir la
+  validación, serialización y envío de una operación por cada archivo.
+- La descarga recursiva de archivos pequeños tardó más que la subida, lo cual
+  es consistente con la creación repetida de rutas locales y aperturas de
+  archivos en el cliente.
+
+## Conclusiones
+
+El proyecto permitió implementar un sistema de almacenamiento remoto inspirado
+en AWS S3 utilizando C, sockets TCP y un formato binario propio para la
+comunicación entre cliente y servidor. La separación entre cliente, servidor,
+protocolo y almacenamiento facilitó organizar la solución y asignar una
+responsabilidad clara a cada módulo.
+
+Las pruebas funcionales y de validación mostraron que el sistema cumple con las
+operaciones principales solicitadas: creación y eliminación de buckets, copias
+en ambas direcciones, recorridos recursivos, persistencia después de reiniciar
+el servidor y manejo de errores esperados. También se comprobó que el motor de
+almacenamiento reutiliza espacio y mantiene los datos dentro de un único archivo
+por bucket, como pedía el enunciado.
+
+En las pruebas de rendimiento se observó que el sistema trabaja mejor con
+archivos grandes que con muchos archivos pequeños. Esto confirma que, aunque la
+transmisión por bloques evita cargar archivos completos en memoria y funciona
+bien para datos grandes, el costo fijo de procesar cada archivo individual
+influye bastante cuando se realizan muchas operaciones pequeñas.
+
+En general, el proyecto cumple con el objetivo de simular un servicio sencillo
+de almacenamiento de objetos, y además deja una base clara para futuras mejoras
+como concurrencia en el servidor, optimización de operaciones recursivas y una
+expansión del formato interno del bucket.

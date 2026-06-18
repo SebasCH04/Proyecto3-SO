@@ -39,13 +39,13 @@ almacenamiento. El motor administra los archivos `.s3b`.
 
 ## Responsabilidad de cada archivo
 
-- `src/client.c`: comandos, opciones, recorridos locales y sincronización.
-- `src/server.c`: socket de escucha, recepción y despacho de solicitudes.
-- `src/protocol.c`: serialización de los mensajes enviados por TCP.
-- `src/storage_file.c`: buckets, objetos y espacios libres.
-- `src/uri.c`: validación de direcciones `s3://`.
-- `src/manifest.c`: listas de archivos utilizadas por operaciones recursivas.
-- `src/common.c`: lectura, escritura, conexiones y funciones compartidas.
+- `C/client.c`: comandos, opciones, recorridos locales y sincronización.
+- `C/server.c`: socket de escucha, recepción y despacho de solicitudes.
+- `C/protocol.c`: serialización de los mensajes enviados por TCP.
+- `C/storage_file.c`: buckets, objetos y espacios libres.
+- `C/uri.c`: validación de direcciones `s3://`.
+- `C/manifest.c`: listas de archivos utilizadas por operaciones recursivas.
+- `C/common.c`: lectura, escritura, conexiones y funciones compartidas.
 
 ## Qué debe comprobarse en las pruebas
 

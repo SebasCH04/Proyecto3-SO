@@ -1,10 +1,10 @@
 # Contrato para el motor de almacenamiento
 
-El archivo público `include/storage.h` es la frontera entre ambas mitades del
-proyecto. `src/server.c` solo llama esas funciones y no conoce el formato
+El archivo público `H/storage.h` es la frontera entre ambas mitades del
+proyecto. `C/server.c` solo llama esas funciones y no conoce el formato
 interno de los buckets.
 
-El backend persistente está implementado en `src/storage_file.c`. Este:
+El backend persistente está implementado en `C/storage_file.c`. Este:
 
 1. Implementa todas las funciones declaradas en `storage.h`.
 2. Consume exactamente `size` bytes de `input_fd` en `storage_put_object`.
