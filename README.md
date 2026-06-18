@@ -1,7 +1,13 @@
 # Proyecto #3 de Principios de Sistemas Operativos
 
-Cliente y servidor en C11 que simulan almacenamiento de objetos estilo AWS S3
-sobre TCP. Cada bucket se almacena persistentemente en un único archivo `.s3b`.
+- Instituto Tecnológico de Costa Rica
+- Escuela de Ingeniería en Computación
+- Principios de Sistemas Operativos
+- Estudiantes:
+	- Santiago Chaves Garbanzo, 2023047710
+	- Sebastián Calvo Hernández, 2022099320
+- Semestre I - 2026
+- Fecha de Entrega: Domingo 28 de junio
 
 ## Introducción
 
