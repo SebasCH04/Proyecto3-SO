@@ -27,6 +27,34 @@ transmitieran por partes y no se cargaran completos en memoria. Esto permite
 trabajar tanto con archivos de texto como con archivos binarios de mayor
 tamaño.
 
+### Arquitectura general
+
+```mermaid
+flowchart LR
+    U([Usuario])
+    L[Archivos locales]
+    C["aws-s3<br/>Cliente"]
+    S["aws-s3_server<br/>Servidor"]
+    M["Motor de almacenamiento<br/>storage_*"]
+    B[("data/bucket.s3b")]
+
+    U -->|"Comandos: ls, mb, cp,<br/>mv, rm, sync y rb"| C
+    L <-->|"Lectura y escritura"| C
+    C <-->|"TCP<br/>Protocolo binario"| S
+    S -->|"Operaciones validadas"| M
+    M <-->|"Metadatos y objetos"| B
+
+    classDef user fill:#f3f4f6,stroke:#4b5563,color:#111827;
+    classDef client fill:#dbeafe,stroke:#2563eb,color:#111827;
+    classDef server fill:#dcfce7,stroke:#16a34a,color:#111827;
+    classDef storage fill:#fef3c7,stroke:#d97706,color:#111827;
+
+    class U,L user;
+    class C client;
+    class S server;
+    class M,B storage;
+```
+
 ## Descripción del problema
 
 El problema consiste en simular un sistema de almacenamiento de objetos similar
@@ -191,6 +219,29 @@ abre el archivo local y envía:
 4. El tamaño y la fecha de modificación.
 5. El contenido del archivo en bloques de 64 KiB.
 
+### Flujo de una subida
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Usuario
+    participant C as aws-s3
+    participant S as aws-s3_server
+    participant B as Bucket .s3b
+
+    U->>C: cp archivo.bin s3://bucket/ruta/
+    C->>C: Valida la URI y abre el archivo
+    C->>S: Encabezado PUT_OBJECT
+    C->>S: Bucket, clave, tamaño y fecha
+    loop Bloques de 64 KiB
+        C->>S: Datos del archivo
+        S->>B: Escritura en la posición asignada
+    end
+    S->>B: Actualiza metadatos y espacios libres
+    S-->>C: STATUS_OK
+    C-->>U: Operación completada
+```
+
 El servidor busca primero si el objeto ya existe y luego decide dónde guardar
 los datos. Para los objetos nuevos intenta reutilizar la primera región libre
 que tenga espacio suficiente. Si no existe una región adecuada, utiliza el
@@ -269,6 +320,39 @@ y la lista de espacios libres. Los datos se almacenan después de ese bloque.
 Se utiliza primer ajuste para reutilizar espacio. La interfaz se describe en
 [`docs/storage-interface.md`](docs/storage-interface.md) y el protocolo en
 [`docs/protocol.md`](docs/protocol.md).
+
+### Distribución de un bucket
+
+```mermaid
+flowchart TB
+    subgraph F["Archivo único: data/nombre-del-bucket.s3b"]
+        H["Encabezado<br/>firma, versión y contadores"]
+        O["Tabla de objetos<br/>clave, posición, tamaño y fecha"]
+        E["Lista de espacios libres<br/>posición y tamaño"]
+        D1["Datos del objeto 1"]
+        D2["Espacio reutilizable"]
+        D3["Datos del objeto 2"]
+
+        H --> O
+        O --> E
+        E -->|"Fin del primer MiB"| D1
+        D1 --> D2
+        D2 --> D3
+    end
+
+    N["Objeto nuevo"] -->|"Primer ajuste"| D2
+    X["Objeto eliminado"] -.->|"Libera su región"| E
+
+    classDef metadata fill:#dbeafe,stroke:#2563eb,color:#111827;
+    classDef data fill:#dcfce7,stroke:#16a34a,color:#111827;
+    classDef free fill:#fee2e2,stroke:#dc2626,color:#111827;
+    classDef action fill:#f3f4f6,stroke:#4b5563,color:#111827;
+
+    class H,O,E metadata;
+    class D1,D3 data;
+    class D2 free;
+    class N,X action;
+```
 
 ## Pruebas
 
